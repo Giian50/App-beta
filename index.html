@@ -1,0 +1,802 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#C1602F">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Cuadrante">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="manifest" href="manifest.json">
+<title>Cuadrante — muestreo intermareal</title>
+<style>
+:root{
+  --bg:#F3EFE4; --card:#FBF9F3; --ink:#16302C; --ink-soft:#587068;
+  --line:#DCD3BE; --accent:#C1602F; --accent-2:#2C6E72; --success:#4C7A5E;
+  --warn:#B98A2E; --danger:#A23B2E;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+  min-height:100%;}
+.mono{font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace}
+#app{max-width:460px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;
+  padding-bottom:env(safe-area-inset-bottom)}
+.topbar{display:flex;align-items:center;justify-content:space-between;
+  padding:calc(16px + env(safe-area-inset-top)) 18px 12px;border-bottom:1px solid var(--line)}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.title-block{display:flex;flex-direction:column}
+.title{font-weight:700;font-size:19px;letter-spacing:-0.01em}
+.subtitle{font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.08em}
+.logo{position:relative;width:26px;height:26px;flex-shrink:0}
+.logo span{position:absolute;width:12px;height:12px;border:2px solid var(--accent)}
+.logo .tl{top:0;left:0;border-right:none;border-bottom:none}
+.logo .br{bottom:0;right:0;border-left:none;border-top:none}
+.iconbtn{border:1px solid var(--line);background:var(--card);border-radius:10px;
+  width:38px;height:38px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;color:var(--ink);font-size:16px}
+.body{flex:1;padding:16px 18px 40px}
+.hidden{display:none !important}
+
+.btn-primary{background:var(--accent);color:#fff;border:none;font-weight:600;font-size:14.5px;
+  padding:13px 18px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+  gap:8px;cursor:pointer;width:100%}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed}
+.btn-secondary{background:var(--card);color:var(--accent-2);border:1.5px solid var(--accent-2);
+  font-weight:600;font-size:14px;padding:11px 16px;border-radius:12px;display:flex;
+  align-items:center;justify-content:center;gap:8px;cursor:pointer;white-space:nowrap}
+.btn-secondary:disabled{opacity:.4;cursor:not-allowed}
+.btn-ghost{background:transparent;color:var(--ink-soft);border:1px solid var(--line);
+  font-weight:500;font-size:14px;padding:11px 16px;border-radius:12px;display:flex;
+  align-items:center;justify-content:center;gap:6px;cursor:pointer}
+.btn-danger{background:#fff;color:var(--danger);border:1.5px solid var(--danger);font-weight:600;
+  font-size:14px;padding:11px 16px;border-radius:12px;display:flex;align-items:center;
+  justify-content:center;gap:8px;cursor:pointer;width:100%}
+.chip{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:7px 13px;
+  font-size:12.5px;font-weight:500;display:inline-flex;align-items:center;gap:6px;cursor:pointer;color:var(--ink)}
+.chip.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.dot.teal{background:var(--accent-2)}
+.dot.rust{background:var(--accent)}
+
+.new-btn{margin-bottom:12px}
+.cal-strip{display:flex;align-items:center;gap:8px;font-size:12px;padding:9px 12px;
+  border-radius:10px;margin-bottom:16px;background:#EFE7D6;color:var(--warn);border:1px solid #E4D6B0}
+.cal-strip.ok{background:#E7EEE7;color:var(--success);border-color:#CFE0CF}
+.offline-strip{display:flex;align-items:center;gap:8px;font-size:12px;padding:9px 12px;
+  border-radius:10px;margin-bottom:16px;background:#FBEDE9;color:var(--danger);border:1px solid #E9C7BC}
+
+.empty-state{text-align:center;padding:50px 10px}
+.frame{position:relative}
+.frame span.c{position:absolute;width:22px;height:22px;border:2.5px solid var(--accent);pointer-events:none}
+.frame .tl{top:-2px;left:-2px;border-right:none;border-bottom:none}
+.frame .tr{top:-2px;right:-2px;border-left:none;border-bottom:none}
+.frame .bl{bottom:-2px;left:-2px;border-right:none;border-top:none}
+.frame .br{bottom:-2px;right:-2px;border-left:none;border-top:none}
+.empty-title{font-weight:700;font-size:16px;margin-bottom:6px}
+.empty-text{font-size:13px;color:var(--ink-soft);line-height:1.5;max-width:280px;margin:0 auto}
+
+.cards{display:flex;flex-direction:column;gap:10px}
+.card{display:flex;gap:12px;text-align:left;background:var(--card);border:1px solid var(--line);
+  border-radius:14px;padding:10px;cursor:pointer;width:100%}
+.card-thumb{width:64px;height:64px;object-fit:cover;border-radius:8px;flex-shrink:0;background:#ddd}
+.card-info{flex:1;min-width:0}
+.card-row{display:flex;align-items:center;gap:5px;font-size:12px}
+.card-date{font-size:11px;color:var(--ink-soft);margin:2px 0 6px}
+.card-row2{display:flex;gap:6px;flex-wrap:wrap}
+.pill{background:#EFEAD9;font-size:11px;padding:3px 8px;border-radius:20px;color:var(--ink)}
+.pill.ok{background:#E7EEE7;color:var(--success)}
+.pill.pending{background:#FBEDE9;color:var(--danger)}
+.pill.muted{color:var(--ink-soft)}
+
+.steps{font-size:11px;letter-spacing:.1em;color:var(--accent);margin-bottom:8px;font-weight:600}
+.step h3{font-size:18px;margin:0 0 6px}
+.hint{font-size:13px;color:var(--ink-soft);line-height:1.5;margin:0 0 14px}
+.field{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--ink-soft);flex:1}
+.field-row{display:flex;gap:10px;margin-bottom:14px;align-items:flex-end}
+.input{border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;font-size:14px;
+  background:#fff;color:var(--ink);width:100%;font-family:inherit}
+.input:focus{outline:none;border-color:var(--accent-2)}
+textarea.input{resize:vertical}
+.gps-ok{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--success);margin:10px 0}
+.gps-error{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--danger);margin:10px 0}
+.wizard-actions{display:flex;gap:10px;margin-top:18px}
+.wizard-actions .btn-primary{flex:1}
+
+.photo-cta{width:100%;height:100%;background:transparent;border:none;display:flex;
+  flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--accent);
+  cursor:pointer;font-weight:600;font-size:13.5px}
+.canvas-wrap{border-radius:10px;overflow:hidden;border:1px solid var(--line);display:flex;
+  justify-content:center;background:#000;margin-top:10px}
+canvas.stage{width:100%;height:auto;touch-action:none;display:block}
+.canvas-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.slider-block{margin-top:16px}
+.slider-label{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-soft);margin-bottom:4px}
+.slider-block input[type=range]{width:100%;accent-color:var(--accent)}
+.coverage-readout{margin-top:16px;padding:14px;background:var(--card);border:1px solid var(--line);
+  border-radius:12px;display:flex;justify-content:space-between;align-items:center}
+.coverage-label{font-size:12px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em}
+.coverage-value{font-size:22px;font-weight:600;color:var(--accent)}
+
+.result-card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:14px 16px;display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
+.result-row{display:flex;justify-content:space-between;align-items:center;font-size:13.5px;gap:10px}
+.result-row span:first-child{color:var(--ink-soft);flex-shrink:0}
+.result-note{font-size:12px;line-height:1.5;padding-top:6px;border-top:1px dashed var(--line)}
+.result-note.ok{color:var(--success)}
+.result-note.warn{color:var(--warn)}
+
+.detail-photo{width:100%;display:block;border-radius:4px}
+.validation-card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:14px 16px;margin-bottom:16px}
+.validation-title{font-weight:600;font-size:14px;margin-bottom:6px}
+.confirm-row{background:#FBEDE9;border:1px solid #E9C7BC;border-radius:12px;padding:12px 14px;
+  display:flex;flex-direction:column;gap:10px;font-size:13px;color:var(--danger)}
+.settings-block{margin-bottom:26px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);
+  color:#fff;padding:10px 18px;border-radius:30px;font-size:13px;font-weight:500;
+  box-shadow:0 6px 20px rgba(0,0,0,.2);z-index:50;max-width:90%;text-align:center}
+.spin{display:inline-block;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading{display:flex;align-items:center;justify-content:center;gap:10px;color:var(--ink-soft);padding:60px 0}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+/* ================= storage: IndexedDB, fully local/offline ================= */
+const DB_NAME = "cuadrante-db", DB_VERSION = 1;
+let dbPromise = null;
+function openDb(){
+  if(dbPromise) return dbPromise;
+  dbPromise = new Promise((resolve,reject)=>{
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = ()=>{
+      const db = req.result;
+      if(!db.objectStoreNames.contains("samples")) db.createObjectStore("samples",{keyPath:"id"});
+      if(!db.objectStoreNames.contains("calibration")) db.createObjectStore("calibration",{keyPath:"cid"});
+      if(!db.objectStoreNames.contains("settings")) db.createObjectStore("settings",{keyPath:"key"});
+    };
+    req.onsuccess = ()=>resolve(req.result);
+    req.onerror = ()=>reject(req.error);
+  });
+  return dbPromise;
+}
+async function idbGetAll(store){
+  const db = await openDb();
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(store,"readonly");
+    const req = tx.objectStore(store).getAll();
+    req.onsuccess = ()=>resolve(req.result||[]);
+    req.onerror = ()=>reject(req.error);
+  });
+}
+async function idbPut(store, value){
+  const db = await openDb();
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(store,"readwrite");
+    tx.objectStore(store).put(value);
+    tx.oncomplete = ()=>resolve(true);
+    tx.onerror = ()=>reject(tx.error);
+  });
+}
+async function idbDelete(store, key){
+  const db = await openDb();
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(store,"readwrite");
+    tx.objectStore(store).delete(key);
+    tx.oncomplete = ()=>resolve(true);
+    tx.onerror = ()=>reject(tx.error);
+  });
+}
+
+/* ================= helpers ================= */
+function uid(){ return "s_"+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function colorDist(a,b){ return Math.sqrt((a[0]-b[0])**2+(a[1]-b[1])**2+(a[2]-b[2])**2); }
+function linreg(points){
+  const n = points.length; if(n<2) return null;
+  const sumX=points.reduce((a,p)=>a+p.x,0), sumY=points.reduce((a,p)=>a+p.y,0);
+  const sumXY=points.reduce((a,p)=>a+p.x*p.y,0), sumXX=points.reduce((a,p)=>a+p.x*p.x,0);
+  const denom = n*sumXX - sumX*sumX; if(denom===0) return null;
+  const slope=(n*sumXY - sumX*sumY)/denom, intercept=(sumY - slope*sumX)/n;
+  const meanY=sumY/n;
+  const ssTot=points.reduce((a,p)=>a+(p.y-meanY)**2,0);
+  const ssRes=points.reduce((a,p)=>{const pred=slope*p.x+intercept; return a+(p.y-pred)**2;},0);
+  const r2 = ssTot===0?1:1-ssRes/ssTot;
+  return {slope,intercept,r2,n};
+}
+function estimateBiomass(coveragePct, calibration){
+  if(!calibration || calibration.length<2) return null;
+  const reg = linreg(calibration.map(p=>({x:p.coveragePercent,y:p.weightG})));
+  if(!reg) return null;
+  return {value: Math.max(0, reg.slope*coveragePct+reg.intercept), n:reg.n, r2:reg.r2};
+}
+function fmtCoord(n){ if(n===null||n===undefined||Number.isNaN(n)) return "—"; return Number(n).toFixed(5); }
+function fmtDate(iso){ try{ return new Date(iso).toLocaleString("es-CL",{dateStyle:"medium",timeStyle:"short"}); }catch{ return iso; } }
+function esc(s){ return (s||"").replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function getCanvasCoords(e, canvas){
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width/rect.width, scaleY = canvas.height/rect.height;
+  const cx = (e.touches? e.touches[0].clientX : e.clientX);
+  const cy = (e.touches? e.touches[0].clientY : e.clientY);
+  return {x: Math.round((cx-rect.left)*scaleX), y: Math.round((cy-rect.top)*scaleY)};
+}
+
+/* ================= app state ================= */
+const S = {
+  screen:"list", loading:true, samples:[], calibration:[], settings:{quadratSize:50},
+  activeId:null, toastTimer:null,
+  wizard:null // set up on entering "new"
+};
+
+async function loadAll(){
+  S.loading = true; render();
+  S.samples = (await idbGetAll("samples")).sort((a,b)=> new Date(b.createdAt)-new Date(a.createdAt));
+  S.calibration = await idbGetAll("calibration");
+  const settingsRows = await idbGetAll("settings");
+  const qs = settingsRows.find(r=>r.key==="quadratSize");
+  S.settings = { quadratSize: qs ? qs.value : 50 };
+  S.loading = false; render();
+}
+
+function showToast(msg){
+  const el = document.getElementById("toast");
+  el.textContent = msg; el.classList.remove("hidden");
+  clearTimeout(S.toastTimer);
+  S.toastTimer = setTimeout(()=> el.classList.add("hidden"), 2200);
+}
+
+async function saveSample(sample){
+  await idbPut("samples", sample);
+  S.samples = [sample, ...S.samples];
+}
+async function updateSample(sample){
+  await idbPut("samples", sample);
+  S.samples = S.samples.map(s=> s.id===sample.id ? sample : s);
+}
+async function deleteSample(id){
+  await idbDelete("samples", id);
+  const toRemove = S.calibration.filter(c=>c.sampleId===id);
+  for(const c of toRemove) await idbDelete("calibration", c.cid);
+  S.calibration = S.calibration.filter(c=>c.sampleId!==id);
+  S.samples = S.samples.filter(s=>s.id!==id);
+}
+async function addCalibrationPoint(point){
+  point.cid = "c_"+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+  await idbPut("calibration", point);
+  S.calibration = [...S.calibration, point];
+}
+async function saveSettings(next){
+  await idbPut("settings", {key:"quadratSize", value: next.quadratSize});
+  S.settings = next;
+}
+async function resetCalibration(){
+  for(const c of S.calibration) await idbDelete("calibration", c.cid);
+  S.calibration = [];
+}
+
+/* ================= render root ================= */
+function render(){
+  const app = document.getElementById("app");
+  app.innerHTML = `
+    <div class="topbar">
+      <div class="topbar-left">
+        ${S.screen==="list" ? `
+          <div class="logo"><span class="tl"></span><span class="br"></span></div>
+          <div class="title-block"><div class="title">Cuadrante</div><div class="subtitle">muestreo intermareal · offline</div></div>
+        ` : `
+          <button class="iconbtn" id="btn-back">‹</button>
+          <div class="title-block"><div class="title">${
+            S.screen==="new"?"Nuevo punto":S.screen==="detail"?"Punto de muestreo":"Ajustes"
+          }</div></div>
+        `}
+      </div>
+      ${S.screen==="list" ? `<button class="iconbtn" id="btn-settings">⚙</button>` : ``}
+    </div>
+    <div class="body" id="body"></div>
+    <div class="toast hidden" id="toast"></div>
+  `;
+  document.getElementById("btn-back")?.addEventListener("click", ()=>{ S.screen="list"; S.wizard=null; render(); });
+  document.getElementById("btn-settings")?.addEventListener("click", ()=>{ S.screen="settings"; render(); });
+
+  const body = document.getElementById("body");
+  if(S.loading){ body.innerHTML = `<div class="loading">Cargando datos…</div>`; return; }
+  if(S.screen==="list") renderList(body);
+  else if(S.screen==="new") renderWizard(body);
+  else if(S.screen==="detail") renderDetail(body);
+  else if(S.screen==="settings") renderSettings(body);
+}
+
+/* ================= list screen ================= */
+function renderList(body){
+  const calibrated = S.calibration.length>=2;
+  body.innerHTML = `
+    <button class="btn-primary new-btn" id="btn-new">+ Nuevo punto</button>
+    <div class="cal-strip ${calibrated?'ok':''}">
+      ${calibrated?'✓':'⚠'} Calibración: ${S.calibration.length} muestra${S.calibration.length===1?'':'s'} validada${S.calibration.length===1?'':'s'}${calibrated?'':' · agrega al menos 2 para activar estimaciones'}
+    </div>
+    ${S.samples.length===0 ? `
+      <div class="empty-state">
+        <div class="frame" style="width:84px;height:84px;margin:0 auto 14px">
+          <span class="c tl"></span><span class="c tr"></span><span class="c bl"></span><span class="c br"></span>
+        </div>
+        <div class="empty-title">Aún no registras puntos</div>
+        <div class="empty-text">Toca "Nuevo punto" en cada estación de muestreo: solo se guarda la coordenada y la foto del cuadrante, sin trazar el recorrido. Todo queda guardado en este dispositivo, aunque no tengas señal.</div>
+      </div>
+    ` : `
+      <div class="cards">
+        ${S.samples.map(s=>`
+          <button class="card" data-id="${s.id}">
+            ${s.photoDataUrl? `<img class="card-thumb" src="${s.photoDataUrl}">` : `<div class="card-thumb"></div>`}
+            <div class="card-info">
+              <div class="card-row mono">📍 ${fmtCoord(s.lat)}, ${fmtCoord(s.lon)}</div>
+              <div class="card-date">${fmtDate(s.createdAt)}</div>
+              <div class="card-row2">
+                <span class="pill">${s.coveragePercent!=null?s.coveragePercent.toFixed(1):'—'}% cobertura</span>
+                ${s.validatedWeightG!=null
+                  ? `<span class="pill ok">✓ ${s.validatedWeightG} g reales</span>`
+                  : s.estimatedBiomassG!=null
+                    ? `<span class="pill">~${s.estimatedBiomassG.toFixed(1)} g est.</span>`
+                    : `<span class="pill muted">sin calibrar</span>`}
+              </div>
+            </div>
+          </button>
+        `).join("")}
+      </div>
+    `}
+  `;
+  document.getElementById("btn-new")?.addEventListener("click", ()=>{ S.screen="new"; S.wizard=null; render(); });
+  body.querySelectorAll(".card").forEach(c=>{
+    c.addEventListener("click", ()=>{ S.activeId = c.dataset.id; S.screen="detail"; render(); });
+  });
+}
+
+/* ================= new sample wizard ================= */
+function newWizardState(){
+  return {
+    step:1, lat:"", lon:"", accuracy:null, gpsStatus:"idle",
+    quadratSize: S.settings.quadratSize || 50,
+    photoLoaded:false, rect:null, mode:"idle", dragStart:null,
+    substrateColor:null, organismColor:null, substratePt:null, organismPt:null,
+    threshold:40, thresholdTouched:false, coveragePercent:null,
+    notes:"", baseCanvas:null, maskCanvas:null
+  };
+}
+
+function renderWizard(body){
+  if(!S.wizard) S.wizard = newWizardState();
+  const w = S.wizard;
+  body.innerHTML = `<div class="steps">PASO ${w.step} DE 4</div><div id="step-host"></div>`;
+  const host = document.getElementById("step-host");
+  if(w.step===1) renderStep1(host);
+  else if(w.step===2) renderStep2(host);
+  else if(w.step===3) renderStep3(host);
+  else renderStep4(host);
+}
+
+function renderStep1(host){
+  const w = S.wizard;
+  const canContinue = w.lat!=="" && w.lon!=="" && !Number.isNaN(Number(w.lat)) && !Number.isNaN(Number(w.lon));
+  host.innerHTML = `
+    <div class="step">
+      <h3>Ubicación del punto</h3>
+      <p class="hint">Solo se guarda la coordenada de este punto de muestreo, no el trayecto recorrido. El GPS funciona sin señal de datos.</p>
+      <button class="btn-secondary" id="btn-gps">${w.gpsStatus==="loading"?"Obteniendo…":"📍 Obtener coordenadas GPS"}</button>
+      ${w.gpsStatus==="ok" ? `<div class="gps-ok">✓ Ubicación capturada${w.accuracy!=null?` · precisión ±${w.accuracy} m`:""}</div>` : ""}
+      ${w.gpsStatus==="error" ? `<div class="gps-error">⚠ ${esc(w.gpsError || "No se pudo obtener el GPS.")} Mientras tanto, ingresa la coordenada manualmente abajo.</div>` : ""}
+      <div class="field-row">
+        <label class="field"><span>Latitud</span><input class="input mono" id="in-lat" inputmode="decimal" placeholder="-33.45678" value="${esc(w.lat)}"></label>
+        <label class="field"><span>Longitud</span><input class="input mono" id="in-lon" inputmode="decimal" placeholder="-71.23456" value="${esc(w.lon)}"></label>
+      </div>
+      <div class="wizard-actions">
+        <button class="btn-ghost" id="btn-cancel">Cancelar</button>
+        <button class="btn-primary" id="btn-next" ${canContinue?"":"disabled"}>Continuar</button>
+      </div>
+    </div>
+  `;
+  document.getElementById("btn-gps").addEventListener("click", ()=>{
+    w.gpsStatus = "loading"; w.gpsError = null; renderWizard(document.getElementById("body"));
+    if(!navigator.geolocation){
+      w.gpsStatus="error"; w.gpsError="Este navegador no tiene GPS disponible.";
+      renderWizard(document.getElementById("body")); return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos)=>{
+        w.lat = pos.coords.latitude.toFixed(6); w.lon = pos.coords.longitude.toFixed(6);
+        w.accuracy = Math.round(pos.coords.accuracy); w.gpsStatus="ok";
+        renderWizard(document.getElementById("body"));
+      },
+      (err)=>{
+        w.gpsStatus="error";
+        if(err.code === 1) w.gpsError = "Permiso de ubicación denegado. Revisa Ajustes → Privacidad → Localización en tu iPhone.";
+        else if(err.code === 2) w.gpsError = "Sin señal satelital por ahora (posición no disponible). Muévete a cielo abierto e intenta de nuevo.";
+        else if(err.code === 3) w.gpsError = "Se agotó el tiempo esperando señal GPS. Intenta de nuevo, puede tardar más bajo techo o entre rocas.";
+        else w.gpsError = "No se pudo obtener el GPS (" + (err.message||"error desconocido") + ").";
+        renderWizard(document.getElementById("body"));
+      },
+      { enableHighAccuracy:true, timeout:20000, maximumAge:0 }
+    );
+  });
+  document.getElementById("in-lat").addEventListener("input", e=>{ w.lat=e.target.value; syncStep1Btn(); });
+  document.getElementById("in-lon").addEventListener("input", e=>{ w.lon=e.target.value; syncStep1Btn(); });
+  document.getElementById("btn-cancel").addEventListener("click", ()=>{ S.screen="list"; S.wizard=null; render(); });
+  document.getElementById("btn-next").addEventListener("click", ()=>{ w.step=2; renderWizard(document.getElementById("body")); });
+  function syncStep1Btn(){
+    const ok = w.lat!=="" && w.lon!=="" && !Number.isNaN(Number(w.lat)) && !Number.isNaN(Number(w.lon));
+    document.getElementById("btn-next").disabled = !ok;
+  }
+}
+
+function renderStep2(host){
+  const w = S.wizard;
+  const canContinue = w.photoLoaded && w.rect && Math.abs(w.rect.w)>10 && Math.abs(w.rect.h)>10;
+  host.innerHTML = `
+    <div class="step">
+      <h3>Foto y marco del cuadrante</h3>
+      <p class="hint">Fotografía el cuadrante metálico y ajusta el marco naranjo para que coincida con sus bordes internos.</p>
+      <label class="field" style="max-width:160px">
+        <span>📏 Lado del cuadrante (cm)</span>
+        <input class="input mono" type="number" id="in-quadrat" value="${w.quadratSize}">
+      </label>
+      ${!w.photoLoaded ? `
+        <div class="frame" style="width:100%;aspect-ratio:4/3;margin-top:10px">
+          <span class="c tl"></span><span class="c tr"></span><span class="c bl"></span><span class="c br"></span>
+          <button class="photo-cta" id="btn-photo">📷<span>Tomar foto del cuadrante</span></button>
+        </div>
+      ` : `
+        <div class="canvas-wrap"><canvas class="stage" id="stage"></canvas></div>
+        <div class="canvas-actions">
+          <button class="chip ${w.mode==='rect'?'active':''}" id="btn-drawrect">✎ Dibujar marco</button>
+          <button class="chip" id="btn-retake">↻ Repetir foto</button>
+        </div>
+      `}
+      <input type="file" accept="image/*" capture="environment" id="file-input" style="display:none">
+      <div class="wizard-actions">
+        <button class="btn-ghost" id="btn-back2">Atrás</button>
+        <button class="btn-primary" id="btn-next2" ${canContinue?"":"disabled"}>Continuar</button>
+      </div>
+    </div>
+  `;
+  document.getElementById("in-quadrat").addEventListener("input", e=>{ w.quadratSize = e.target.value; });
+  document.getElementById("btn-photo")?.addEventListener("click", ()=> document.getElementById("file-input").click());
+  document.getElementById("btn-retake")?.addEventListener("click", ()=> document.getElementById("file-input").click());
+  document.getElementById("file-input").addEventListener("change", onPhotoSelected);
+  document.getElementById("btn-drawrect")?.addEventListener("click", ()=>{ w.mode = w.mode==='rect'?'idle':'rect'; renderWizard(document.getElementById("body")); });
+  document.getElementById("btn-back2").addEventListener("click", ()=>{ w.step=1; renderWizard(document.getElementById("body")); });
+  document.getElementById("btn-next2").addEventListener("click", ()=>{ w.step=3; renderWizard(document.getElementById("body")); });
+
+  if(w.photoLoaded){
+    const stage = document.getElementById("stage");
+    stage.width = w.baseCanvas.width; stage.height = w.baseCanvas.height;
+    drawStage(stage);
+    attachStageEvents(stage);
+  }
+}
+
+function onPhotoSelected(e){
+  const w = S.wizard;
+  const file = e.target.files?.[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const maxW = 480;
+      const scale = Math.min(1, maxW/img.width);
+      const cw = Math.round(img.width*scale), ch = Math.round(img.height*scale);
+      const base = document.createElement("canvas");
+      base.width = cw; base.height = ch;
+      base.getContext("2d").drawImage(img,0,0,cw,ch);
+      w.baseCanvas = base;
+      w.rect = { x: Math.round(cw*0.15), y: Math.round(ch*0.15), w: Math.round(cw*0.7), h: Math.round(ch*0.7) };
+      w.substrateColor=null; w.organismColor=null; w.substratePt=null; w.organismPt=null;
+      w.coveragePercent=null; w.thresholdTouched=false; w.maskCanvas=null;
+      w.photoLoaded = true;
+      renderWizard(document.getElementById("body"));
+    };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function drawStage(stage){
+  const w = S.wizard;
+  const ctx = stage.getContext("2d");
+  ctx.clearRect(0,0,stage.width,stage.height);
+  ctx.drawImage(w.baseCanvas,0,0);
+  if(w.rect){
+    const x = Math.min(w.rect.x, w.rect.x+w.rect.w), y = Math.min(w.rect.y, w.rect.y+w.rect.h);
+    const rw = Math.abs(w.rect.w), rh = Math.abs(w.rect.h);
+    if(w.maskCanvas && w.coveragePercent!==null){
+      ctx.drawImage(w.maskCanvas,0,0,rw,rh,x,y,rw,rh);
+    }
+    ctx.strokeStyle = "#C1602F"; ctx.lineWidth=2; ctx.setLineDash([6,4]);
+    ctx.strokeRect(x,y,rw,rh); ctx.setLineDash([]);
+  }
+  if(w.substratePt) drawDot(ctx, w.substratePt, "#2C6E72");
+  if(w.organismPt) drawDot(ctx, w.organismPt, "#C1602F");
+}
+function drawDot(ctx, pt, color){
+  ctx.beginPath(); ctx.arc(pt.x, pt.y, 6, 0, Math.PI*2);
+  ctx.fillStyle = color; ctx.fill(); ctx.strokeStyle="#fff"; ctx.lineWidth=2; ctx.stroke();
+}
+
+function attachStageEvents(stage){
+  const w = S.wizard;
+  const down = (e)=>{
+    e.preventDefault();
+    const {x,y} = getCanvasCoords(e, stage);
+    if(w.mode==="rect"){ w.dragStart = {x,y}; w.rect = {x,y,w:0,h:0}; }
+    else if(w.mode==="pickSubstrate" || w.mode==="pickOrganism"){
+      const d = w.baseCanvas.getContext("2d").getImageData(x,y,1,1).data;
+      const color = [d[0],d[1],d[2]];
+      if(w.mode==="pickSubstrate"){ w.substrateColor=color; w.substratePt={x,y}; }
+      else{
+        w.organismColor=color; w.organismPt={x,y};
+        if(!w.thresholdTouched && w.substrateColor){
+          const dist = colorDist(color, w.substrateColor);
+          w.threshold = Math.max(12, Math.min(150, Math.round(dist*0.55)));
+        }
+      }
+      w.mode="idle";
+      if(w.substrateColor) computeCoverage();
+      const host = document.getElementById("step-host") ? document.getElementById("body") : null;
+      renderWizard(document.getElementById("body"));
+    }
+  };
+  const move = (e)=>{
+    if(w.mode!=="rect" || !w.dragStart) return;
+    e.preventDefault();
+    const {x,y} = getCanvasCoords(e, stage);
+    w.rect = {x:w.dragStart.x, y:w.dragStart.y, w:x-w.dragStart.x, h:y-w.dragStart.y};
+    drawStage(stage);
+  };
+  const up = ()=>{
+    if(w.mode==="rect" && w.dragStart){
+      w.dragStart=null; w.mode="idle"; w.coveragePercent=null; w.maskCanvas=null;
+      renderWizard(document.getElementById("body"));
+    }
+  };
+  stage.addEventListener("pointerdown", down);
+  stage.addEventListener("pointermove", move);
+  stage.addEventListener("pointerup", up);
+  stage.style.touchAction = "none";
+}
+
+function computeCoverage(){
+  const w = S.wizard;
+  if(!w.baseCanvas || !w.rect || !w.substrateColor) return;
+  const x = Math.max(0, Math.min(w.rect.x, w.rect.x+w.rect.w));
+  const y = Math.max(0, Math.min(w.rect.y, w.rect.y+w.rect.h));
+  const rw = Math.min(w.baseCanvas.width-x, Math.abs(w.rect.w));
+  const rh = Math.min(w.baseCanvas.height-y, Math.abs(w.rect.h));
+  if(rw<=0||rh<=0) return;
+  const bctx = w.baseCanvas.getContext("2d");
+  const imgData = bctx.getImageData(x,y,rw,rh);
+  const data = imgData.data;
+  const maskData = new Uint8ClampedArray(data.length);
+  let organismCount = 0; const total = rw*rh;
+  for(let i=0;i<data.length;i+=4){
+    const px=[data[i],data[i+1],data[i+2]];
+    const dist = colorDist(px, w.substrateColor);
+    if(dist>w.threshold){
+      organismCount++;
+      maskData[i]=193; maskData[i+1]=96; maskData[i+2]=47; maskData[i+3]=130;
+    }
+  }
+  const maskCanvas = document.createElement("canvas");
+  maskCanvas.width=rw; maskCanvas.height=rh;
+  maskCanvas.getContext("2d").putImageData(new ImageData(maskData, rw, rh), 0, 0);
+  w.maskCanvas = maskCanvas;
+  w.coveragePercent = (organismCount/total)*100;
+}
+
+function renderStep3(host){
+  const w = S.wizard;
+  const canContinue = w.coveragePercent !== null;
+  host.innerHTML = `
+    <div class="step">
+      <h3>Análisis de cobertura</h3>
+      <p class="hint">Marca un punto de sustrato (roca/arena desnuda) y, si puedes, uno sobre el organismo. El resto del marco se clasifica por diferencia de color.</p>
+      <div class="canvas-wrap"><canvas class="stage" id="stage3"></canvas></div>
+      <div class="canvas-actions">
+        <button class="chip ${w.mode==='pickSubstrate'?'active':''}" id="btn-sub"><span class="dot teal"></span> Marcar sustrato</button>
+        <button class="chip ${w.mode==='pickOrganism'?'active':''}" id="btn-org"><span class="dot rust"></span> Marcar organismo</button>
+      </div>
+      ${w.substrateColor ? `
+        <div class="slider-block">
+          <div class="slider-label"><span>Sensibilidad de clasificación</span><span class="mono">${w.threshold}</span></div>
+          <input type="range" min="10" max="150" id="sl-threshold" value="${w.threshold}">
+        </div>
+      ` : ""}
+      <div class="coverage-readout">
+        <span class="coverage-label">Cobertura estimada</span>
+        <span class="coverage-value mono">${w.coveragePercent!==null ? w.coveragePercent.toFixed(1)+"%" : "—"}</span>
+      </div>
+      <div class="wizard-actions">
+        <button class="btn-ghost" id="btn-back3">Atrás</button>
+        <button class="btn-primary" id="btn-next3" ${canContinue?"":"disabled"}>Continuar</button>
+      </div>
+    </div>
+  `;
+  const stage = document.getElementById("stage3");
+  stage.width = w.baseCanvas.width; stage.height = w.baseCanvas.height;
+  drawStage(stage); attachStageEvents(stage);
+
+  document.getElementById("btn-sub").addEventListener("click", ()=>{ w.mode = w.mode==='pickSubstrate'?'idle':'pickSubstrate'; renderWizard(document.getElementById("body")); });
+  document.getElementById("btn-org").addEventListener("click", ()=>{ w.mode = w.mode==='pickOrganism'?'idle':'pickOrganism'; renderWizard(document.getElementById("body")); });
+  document.getElementById("sl-threshold")?.addEventListener("input", e=>{
+    w.thresholdTouched = true; w.threshold = Number(e.target.value);
+    computeCoverage(); drawStage(stage);
+    document.querySelector(".coverage-value").textContent = w.coveragePercent!==null ? w.coveragePercent.toFixed(1)+"%" : "—";
+    document.querySelector(".slider-label span:last-child").textContent = w.threshold;
+    document.getElementById("btn-next3").disabled = !(w.coveragePercent!==null);
+  });
+  document.getElementById("btn-back3").addEventListener("click", ()=>{ w.step=2; renderWizard(document.getElementById("body")); });
+  document.getElementById("btn-next3").addEventListener("click", ()=>{ w.step=4; renderWizard(document.getElementById("body")); });
+}
+
+function renderStep4(host){
+  const w = S.wizard;
+  const estimate = w.coveragePercent!==null ? estimateBiomass(w.coveragePercent, S.calibration) : null;
+  host.innerHTML = `
+    <div class="step">
+      <h3>Resultado</h3>
+      <div class="result-card">
+        <div class="result-row"><span>Cobertura</span><span class="mono">${w.coveragePercent?.toFixed(1)}%</span></div>
+        <div class="result-row"><span>Biomasa estimada</span><span class="mono">${estimate ? "~"+estimate.value.toFixed(1)+" g" : "—"}</span></div>
+        ${estimate ? `
+          <div class="result-note ok">Basado en ${estimate.n} muestra${estimate.n===1?"":"s"} validada${estimate.n===1?"":"s"} (ajuste R² ${estimate.r2.toFixed(2)}).${estimate.n<5?" Calibración aún preliminar.":""}</div>
+        ` : `
+          <div class="result-note warn">⚠ Aún sin calibrar. Pesa la muestra de este punto y regístrala en su detalle para activar estimaciones automáticas futuras.</div>
+        `}
+      </div>
+      <label class="field"><span>Notas (opcional)</span><textarea class="input" rows="3" id="in-notes" placeholder="Especie dominante, condiciones de marea, observaciones…">${esc(w.notes)}</textarea></label>
+      <div class="wizard-actions">
+        <button class="btn-ghost" id="btn-back4">Atrás</button>
+        <button class="btn-primary" id="btn-save">✓ Guardar punto</button>
+      </div>
+    </div>
+  `;
+  document.getElementById("in-notes").addEventListener("input", e=>{ w.notes = e.target.value; });
+  document.getElementById("btn-back4").addEventListener("click", ()=>{ w.step=3; renderWizard(document.getElementById("body")); });
+  document.getElementById("btn-save").addEventListener("click", async ()=>{
+    const stageCanvas = document.createElement("canvas");
+    stageCanvas.width = w.baseCanvas.width; stageCanvas.height = w.baseCanvas.height;
+    drawStage(stageCanvas);
+    const sample = {
+      id: uid(), createdAt: new Date().toISOString(),
+      lat: Number(w.lat), lon: Number(w.lon), accuracyM: w.accuracy,
+      quadratSizeCm: Number(w.quadratSize),
+      photoDataUrl: stageCanvas.toDataURL("image/jpeg", 0.72),
+      coveragePercent: w.coveragePercent, threshold: w.threshold,
+      substrateColor: w.substrateColor, organismColor: w.organismColor,
+      estimatedBiomassG: estimate ? estimate.value : null,
+      notes: w.notes, validatedWeightG: null, validatedAt: null
+    };
+    await saveSample(sample);
+    S.screen="list"; S.wizard=null; render(); showToast("Punto guardado en este dispositivo");
+  });
+}
+
+/* ================= detail screen ================= */
+function renderDetail(body){
+  const s = S.samples.find(x=>x.id===S.activeId);
+  if(!s){ body.innerHTML = `<div class="empty-state">Punto no encontrado.</div>`; return; }
+  body.innerHTML = `
+    ${s.photoDataUrl? `
+      <div class="frame" style="margin-bottom:14px">
+        <span class="c tl"></span><span class="c tr"></span><span class="c bl"></span><span class="c br"></span>
+        <img class="detail-photo" src="${s.photoDataUrl}">
+      </div>` : ""}
+    <div class="result-card">
+      <div class="result-row"><span>📍 Coordenada</span><span class="mono">${fmtCoord(s.lat)}, ${fmtCoord(s.lon)}</span></div>
+      <div class="result-row"><span>Fecha</span><span>${fmtDate(s.createdAt)}</span></div>
+      <div class="result-row"><span>Cuadrante</span><span class="mono">${s.quadratSizeCm} cm</span></div>
+      <div class="result-row"><span>Cobertura</span><span class="mono">${s.coveragePercent!=null?s.coveragePercent.toFixed(1):"—"}%</span></div>
+      <div class="result-row"><span>Biomasa estimada</span><span class="mono">${s.estimatedBiomassG!=null? "~"+s.estimatedBiomassG.toFixed(1)+" g":"—"}</span></div>
+      ${s.notes? `<div class="result-row" style="align-items:flex-start"><span>Notas</span><span style="text-align:right;max-width:65%">${esc(s.notes)}</span></div>` : ""}
+    </div>
+    <div class="validation-card">
+      <div class="validation-title">Validación con peso real</div>
+      ${s.validatedWeightG!=null ? `
+        <div class="gps-ok">✓ Validado: ${s.validatedWeightG} g el ${fmtDate(s.validatedAt)}</div>
+      ` : `
+        <p class="hint">Pesa la muestra recolectada en este punto y registra el valor real. Cada validación mejora la calibración del modelo de estimación.</p>
+        <div class="field-row">
+          <input class="input mono" type="number" inputmode="decimal" id="in-weight" placeholder="Peso en gramos">
+          <button class="btn-secondary" id="btn-validate" disabled>Registrar</button>
+        </div>
+      `}
+    </div>
+    <div id="delete-zone">
+      <button class="btn-danger" id="btn-delete">🗑 Eliminar punto</button>
+    </div>
+  `;
+  const wIn = document.getElementById("in-weight");
+  wIn?.addEventListener("input", ()=>{
+    document.getElementById("btn-validate").disabled = !(wIn.value && !Number.isNaN(Number(wIn.value)));
+  });
+  document.getElementById("btn-validate")?.addEventListener("click", async ()=>{
+    const weightG = Number(wIn.value);
+    await addCalibrationPoint({ sampleId:s.id, coveragePercent:s.coveragePercent, weightG, createdAt:new Date().toISOString() });
+    const updated = {...s, validatedWeightG:weightG, validatedAt:new Date().toISOString()};
+    await updateSample(updated);
+    showToast("Validación registrada"); render();
+  });
+  document.getElementById("btn-delete").addEventListener("click", ()=>{
+    document.getElementById("delete-zone").innerHTML = `
+      <div class="confirm-row">
+        <span>¿Eliminar este punto permanentemente?</span>
+        <div style="display:flex;gap:8px">
+          <button class="btn-ghost" id="btn-cancel-del">Cancelar</button>
+          <button class="btn-danger" id="btn-confirm-del">Sí, eliminar</button>
+        </div>
+      </div>`;
+    document.getElementById("btn-cancel-del").addEventListener("click", ()=> renderDetail(body));
+    document.getElementById("btn-confirm-del").addEventListener("click", async ()=>{
+      await deleteSample(s.id); S.screen="list"; render(); showToast("Punto eliminado");
+    });
+  });
+}
+
+/* ================= settings screen ================= */
+function renderSettings(body){
+  const reg = S.calibration.length>=2 ? linreg(S.calibration.map(p=>({x:p.coveragePercent,y:p.weightG}))) : null;
+  body.innerHTML = `
+    <div class="settings-block">
+      <div class="validation-title">Cuadrante por defecto</div>
+      <div class="field-row">
+        <input class="input mono" type="number" id="in-qs" value="${S.settings.quadratSize}">
+        <button class="btn-secondary" id="btn-save-qs">Guardar</button>
+      </div>
+    </div>
+    <div class="settings-block">
+      <div class="validation-title">Calibración del modelo</div>
+      <div class="result-card" style="margin-top:8px">
+        <div class="result-row"><span>Puntos validados</span><span class="mono">${S.calibration.length}</span></div>
+        <div class="result-row"><span>Ajuste (R²)</span><span class="mono">${reg?reg.r2.toFixed(2):"—"}</span></div>
+        <div class="result-row"><span>Estado</span><span>${!reg?"sin datos suficientes":reg.n<5?"preliminar":"establecida"}</span></div>
+      </div>
+      <button class="btn-ghost" id="btn-reset-cal">↻ Reiniciar calibración</button>
+    </div>
+    <div class="settings-block">
+      <div class="validation-title">Datos</div>
+      <p class="hint">Todo se guarda en este dispositivo (IndexedDB), sin conexión a internet ni a ningún servidor.</p>
+      <button class="btn-secondary" id="btn-export" ${S.samples.length===0?"disabled":""}>⬇ Exportar CSV (${S.samples.length})</button>
+    </div>
+  `;
+  document.getElementById("btn-save-qs").addEventListener("click", async ()=>{
+    const val = Number(document.getElementById("in-qs").value);
+    await saveSettings({...S.settings, quadratSize: val});
+    showToast("Ajustes guardados");
+  });
+  document.getElementById("btn-reset-cal").addEventListener("click", async ()=>{
+    await resetCalibration(); showToast("Calibración reiniciada"); renderSettings(body);
+  });
+  document.getElementById("btn-export").addEventListener("click", ()=>{
+    const header = ["id","fecha","lat","lon","precision_m","cuadrante_cm","cobertura_pct","biomasa_estimada_g","biomasa_validada_g","notas"];
+    const rows = S.samples.map(s=>[
+      s.id, s.createdAt, s.lat, s.lon, s.accuracyM??"", s.quadratSizeCm,
+      s.coveragePercent!=null?s.coveragePercent.toFixed(2):"", s.estimatedBiomassG!=null?s.estimatedBiomassG.toFixed(2):"",
+      s.validatedWeightG??"", (s.notes||"").replace(/[\n,]/g," ")
+    ]);
+    const csv = [header, ...rows].map(r=>r.join(",")).join("\n");
+    const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href=url; a.download="cuadrante_muestras.csv"; a.click();
+    URL.revokeObjectURL(url);
+  });
+}
+
+/* ================= boot ================= */
+loadAll();
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", ()=>{
+    navigator.serviceWorker.register("sw.js").catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
